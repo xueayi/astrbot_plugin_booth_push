@@ -1,0 +1,86 @@
+{
+  "daily_cron": {
+    "description": "每日爬取并推送 Cron",
+    "type": "string",
+    "default": "0 8 * * *",
+    "hint": "标准 5 段 Cron 表达式；修改后需要重载插件。"
+  },
+  "timezone": {
+    "description": "Cron 时区",
+    "type": "string",
+    "default": "Asia/Shanghai"
+  },
+  "startup_update": {
+    "description": "插件加载后自动更新",
+    "type": "bool",
+    "default": true,
+    "hint": "首次安装时建议开启，用于抓取最近几页商品。"
+  },
+  "category_quota": {
+    "description": "类目配额",
+    "type": "object",
+    "items": {
+      "3D衣装": {
+        "description": "3D服装（每档数量）",
+        "type": "int",
+        "default": 6
+      },
+      "3D髪型": {
+        "description": "3D发型（每档数量）",
+        "type": "int",
+        "default": 4
+      }
+    }
+  },
+  "crawl_pages": {
+    "description": "每次爬取最大页数",
+    "type": "int",
+    "default": 5
+  },
+  "crawl_workers": {
+    "description": "详情并发数",
+    "type": "int",
+    "default": 4
+  },
+  "crawl_delay": {
+    "description": "请求间隔（秒）",
+    "type": "float",
+    "default": 0.3
+  },
+  "http_timeout": {
+    "description": "HTTP 超时（秒）",
+    "type": "int",
+    "default": 30
+  },
+  "http_proxy": {
+    "description": "HTTP 代理",
+    "type": "string",
+    "default": "",
+    "hint": "留空使用系统代理设置；需要直连时填写 http://127.0.0.1:端口。"
+  },
+  "llm_provider": {
+    "description": "翻译模型",
+    "type": "string",
+    "_special": "select_provider",
+    "default": "",
+    "hint": "留空时使用 AstrBot 当前默认对话模型；关闭翻译时保留日文原标题。"
+  },
+  "enable_translation": {
+    "description": "启用标题翻译",
+    "type": "bool",
+    "default": true
+  },
+  "push_targets": {
+    "description": "推送目标",
+    "type": "list",
+    "items": {"type": "string"},
+    "default": [],
+    "hint": "填写 unified_msg_origin；与 /booth bind 绑定的会话取并集。"
+  },
+  "font_path": {
+    "description": "中文字体路径",
+    "type": "string",
+    "default": "",
+    "hint": "留空时自动探测系统字体，必要时下载并缓存 Noto Sans SC。"
+  }
+}
