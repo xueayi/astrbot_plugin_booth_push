@@ -1,6 +1,9 @@
 name: astrbot_plugin_booth_push
 display_name: Booth 每日上新推送
 desc: 直接爬取 Booth 每日新增的 3D 服装和 3D 发型，生成长图与文本推送到 AstrBot 会话。
+tags:
+  - booth
+  - vrchat
 version: 0.1.0
 author: xueayi
 repo: https://github.com/xueayi/astrbot_plugin_booth_push
