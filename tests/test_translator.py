@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 
-from translator import _parse_json_object, _unwrap_key, translate_titles
+from translator import _parse_json_object, translate_titles
 
 
-class FailingContext:
+class OkContext:
     async def llm_generate(self, **kwargs):
-        raise RuntimeError("provider key invalid")
+        class R:
+            completion_text = 'ok\n```json\n{"7": "中文标题"}\n```'
+
+        return R()
 
 
 def test_parse_json_object_tolerates_code_fence():
@@ -15,12 +18,7 @@ def test_parse_json_object_tolerates_code_fence():
     assert parsed == {"1": "中文一号"}
 
 
-def test_unwrap_key_removes_list_wrapper():
-    assert _unwrap_key("['sk-real-key']") == "sk-real-key"
-    assert _unwrap_key("sk-plain-key") == "sk-plain-key"
-
-
-def test_translate_titles_falls_back_to_direct_api(monkeypatch):
+def test_translate_titles_uses_official_provider_api():
     cache: dict = {}
 
     async def kv_get(key, default=None):
@@ -29,10 +27,32 @@ def test_translate_titles_falls_back_to_direct_api(monkeypatch):
     async def kv_put(key, value):
         cache[key] = value
 
-    async def fake_direct(_pending, _provider_id):
-        return '{"7": "中文标题"}'
+    result = asyncio.run(
+        translate_titles(
+            OkContext(),
+            "provider-a",
+            [{"id": 7, "title": "日本語タイトル"}],
+            kv_get,
+            kv_put,
+        )
+    )
+    assert result == {7: "中文标题"}
+    assert cache["translations"]["7"] == "中文标题"
 
-    monkeypatch.setattr("translator._direct_llm_text", fake_direct)
+
+def test_translate_titles_failure_keeps_cache():
+    class FailingContext:
+        async def llm_generate(self, **kwargs):
+            raise RuntimeError("provider key invalid")
+
+    cache: dict = {}
+
+    async def kv_get(key, default=None):
+        return cache.get(key, default)
+
+    async def kv_put(key, value):
+        cache[key] = value
+
     result = asyncio.run(
         translate_titles(
             FailingContext(),
@@ -42,5 +62,4 @@ def test_translate_titles_falls_back_to_direct_api(monkeypatch):
             kv_put,
         )
     )
-    assert result == {7: "中文标题"}
-    assert cache["translations"]["7"] == "中文标题"
+    assert result == {}
