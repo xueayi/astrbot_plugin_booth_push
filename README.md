@@ -55,7 +55,7 @@ WebUI 插件配置项：
 配置项 `push_targets` 直接填写 umo，例如：
 
 ```text
-飘雪:GroupMessage:1063905732
+bot:GroupMessage:1234567
 ```
 
 也可以直接用 `/booth bind` 在目标会话里绑定，绑定结果会自动写入插件的动态订阅。
