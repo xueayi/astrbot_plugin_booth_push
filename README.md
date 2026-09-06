@@ -52,13 +52,13 @@ WebUI 插件配置项：
 
 ## 手动填写 UMO
 
-配置项 `push_targets` 的每项格式为 `platform_id:message_type:session_id`，例如：
+配置项 `push_targets` 直接填写 umo（unified_msg_origin），例如：
 
 ```text
 飘雪:GroupMessage:1063905732
 ```
 
-如果使用 QQ OneBot，`platform_id` 通常是 WebUI 中平台适配器的名称，`message_type` 为 `GroupMessage` 或 `FriendMessage`，`session_id` 是群号或 QQ 号。也可以用 `/booth bind` 在目标会话里直接绑定。
+也可以直接用 `/booth bind` 在目标会话里绑定，绑定结果会自动写入插件的动态订阅。
 
 ## 数据位置
 

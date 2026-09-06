@@ -75,7 +75,7 @@
     "type": "list",
     "items": {"type": "string"},
     "default": [],
-    "hint": "格式：platform_id:message_type:session_id，例如 飘雪:GroupMessage:1063905732。手动填写的目标会与 /booth bind 绑定的 KV 订阅取并集。"
+    "hint": "填写 umo（unified_msg_origin），与 /booth bind 绑定的订阅取并集。"
   },
   "font_path": {
     "description": "中文字体路径",
