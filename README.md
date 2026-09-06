@@ -52,7 +52,7 @@ WebUI 插件配置项：
 
 ## 手动填写 UMO
 
-配置项 `push_targets` 直接填写 umo（unified_msg_origin），例如：
+配置项 `push_targets` 直接填写 umo，例如：
 
 ```text
 飘雪:GroupMessage:1063905732

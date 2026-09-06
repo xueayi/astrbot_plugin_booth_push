@@ -75,7 +75,7 @@
     "type": "list",
     "items": {"type": "string"},
     "default": [],
-    "hint": "填写 umo（unified_msg_origin），与 /booth bind 绑定的订阅取并集。"
+    "hint": "填写 umo，与 /booth bind 绑定的订阅取并集。"
   },
   "font_path": {
     "description": "中文字体路径",
