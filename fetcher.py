@@ -13,6 +13,7 @@ async def download_thumb(
     item: dict[str, Any],
     cache_dir: Path,
     timeout: int,
+    proxy: str = "",
 ) -> Path | None:
     """Download one item thumbnail into the plugin cache.
 
@@ -20,6 +21,7 @@ async def download_thumb(
         item: Item object containing ``id`` and ``thumb_url``.
         cache_dir: Thumbnail cache directory.
         timeout: Request timeout in seconds.
+        proxy: Optional HTTP proxy URL.
 
     Returns:
         The cached image path, or ``None`` when no thumbnail is available.
@@ -34,8 +36,9 @@ async def download_thumb(
     try:
         async with httpx.AsyncClient(
             timeout=timeout,
-            trust_env=False,
+            trust_env=True,
             follow_redirects=True,
+            proxy=proxy or None,
         ) as client:
             response = await client.get(
                 thumb_url,

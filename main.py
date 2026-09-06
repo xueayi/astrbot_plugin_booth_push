@@ -392,8 +392,9 @@ class Main(star.Star):
                 )
 
         timeout = int(self.config.get("http_timeout", 30) or 30)
+        proxy = str(self.config.get("http_proxy", "") or "")
         thumbnails = await asyncio.gather(
-            *(download_thumb(item, self.thumb_dir, timeout) for item in all_items)
+            *(download_thumb(item, self.thumb_dir, timeout, proxy) for item in all_items)
         )
         for item, thumbnail in zip(all_items, thumbnails):
             item["thumb_path"] = str(thumbnail) if thumbnail else ""
