@@ -85,5 +85,16 @@ targetList.addEventListener("click", async (event) => {
   await renderStatus();
 });
 
-await bridge.ready();
-await renderStatus();
+if (!bridge || typeof bridge.ready !== "function") {
+  statusSummary.textContent = "请通过 AstrBot WebUI 的插件页面打开本页";
+  document.querySelectorAll("button").forEach((button) => {
+    button.disabled = true;
+  });
+} else {
+  try {
+    await bridge.ready();
+    await renderStatus();
+  } catch (error) {
+    statusSummary.textContent = `页面初始化失败：${error}`;
+  }
+}

@@ -165,11 +165,13 @@ class Main(star.Star):
 
     async def api_update(self) -> dict:
         """Manual update endpoint for the plugin page."""
+        self.logger.info("Manual Booth update requested from dashboard page")
         ok, message = await self.run_update()
         return {"status": "ok" if ok else "error", "message": message}
 
     async def api_push(self) -> dict:
         """Manual crawl-and-push endpoint for the plugin page."""
+        self.logger.info("Manual Booth push requested from dashboard page")
         ok, message = await self.run_daily()
         return {"status": "ok" if ok else "error", "message": message}
 
@@ -376,9 +378,11 @@ class Main(star.Star):
 
         all_items = free_items + paid_items
         translations: dict[int, str] = {}
+        translation_attempted = False
         if self.config.get("enable_translation", True):
             provider_id = await self._translation_provider_id()
             if provider_id:
+                translation_attempted = True
                 translations = await translate_titles(
                     self.context,
                     provider_id,
@@ -433,7 +437,13 @@ class Main(star.Star):
             "last_push_at",
             datetime.now(timezone.utc).isoformat(),
         )
-        return True, f"已推送 {len(all_items)} 个商品到 {len(targets)} 个目标。"
+        translated_count = sum(1 for item in all_items if translations.get(item.get("id")))
+        translation_note = (
+            "（翻译失败，保留日文标题）" if translation_attempted and translated_count == 0 else ""
+        )
+        return True, (
+            f"已推送 {len(all_items)} 个商品到 {len(targets)} 个目标。" + translation_note
+        )
 
     async def _mark_seen(
         self,
