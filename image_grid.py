@@ -35,6 +35,7 @@ CELL_PAD = 16
 CATEGORY_LINE_HEIGHT = 24
 TITLE_LINES = 2
 TITLE_LINE_HEIGHT = 26
+META_LINE_HEIGHT = 22
 INFO_GAP = 8
 HEADER_HEIGHT = 48
 TOP_HEIGHT = 74
@@ -48,6 +49,8 @@ CELL_HEIGHT = (
     + TITLE_LINES * TITLE_LINE_HEIGHT
     + INFO_GAP
     + TITLE_LINES * TITLE_LINE_HEIGHT
+    + INFO_GAP
+    + META_LINE_HEIGHT
     + CELL_PAD
 )
 CELL_WIDTH = (CANVAS_WIDTH - CANVAS_PAD * 2 - (COLS - 1) * CELL_PAD) // COLS
@@ -183,7 +186,7 @@ def build_long_image(
     draw.text((CANVAS_PAD, 24), "Booth 每日上新", fill="#111827", font=heading_font)
     draw.text(
         (CANVAS_PAD, 55),
-        f"免费 {len(free_items)} 件 · 付费 {len(paid_items)} 件 · 按点赞排序",
+        (f"每日部分商品推荐 · 免费 {len(free_items)} 件 · 付费 {len(paid_items)} 件 · 按收藏排序"),
         fill="#6b7280",
         font=small_font,
     )
@@ -295,18 +298,13 @@ def build_long_image(
 
                 title = str(item.get("title") or "(無題)")
                 translated = translations.get(item.get("id", 0), "")
-                title_lines = _wrap_text(
-                    draw,
-                    title,
-                    font,
-                    TITLE_LINES if translated else TITLE_LINES + 1,
-                )
+                title_lines = _wrap_text(draw, title, font, TITLE_LINES)
                 title_y = text_y + CATEGORY_LINE_HEIGHT + INFO_GAP
                 if translated and translated != item.get("title", ""):
                     translated_lines = _wrap_text(draw, translated, font, TITLE_LINES)
                 else:
                     translated_lines = []
-                translation_y = title_y + len(title_lines) * TITLE_LINE_HEIGHT + INFO_GAP
+                translation_y = title_y + TITLE_LINES * TITLE_LINE_HEIGHT + INFO_GAP
                 for index, line in enumerate(title_lines):
                     draw.text(
                         (cell_x + CELL_PAD, title_y + index * TITLE_LINE_HEIGHT),
@@ -324,6 +322,15 @@ def build_long_image(
                         fill="#6b7280",
                         font=font,
                     )
+                meta_y = translation_y + len(translated_lines) * TITLE_LINE_HEIGHT + INFO_GAP
+                price = int(item.get("price") or 0)
+                likes = int(item.get("likes") or 0)
+                draw.text(
+                    (cell_x + CELL_PAD, meta_y),
+                    f"价格 ¥{price:,} · 收藏 {likes}",
+                    fill="#4b5563",
+                    font=small_font,
+                )
             y += CELL_HEIGHT
 
     draw.text(

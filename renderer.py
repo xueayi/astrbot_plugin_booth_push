@@ -37,4 +37,14 @@ def render_text(
             if translated and translated != title:
                 lines.append(translated)
             lines.append(str(item.get("item_url") or ""))
+            lines.append("")
+
+    while lines and lines[-1] == "":
+        lines.pop()
+    lines.extend(
+        [
+            "",
+            "数据来源：https://github.com/xueayi/astrbot_plugin_booth_push",
+        ]
+    )
     return "\n".join(lines)
