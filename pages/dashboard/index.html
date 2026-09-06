@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Booth 推送管理</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <h1>Booth 推送管理</h1>
+        <p id="status-summary" class="summary">加载中...</p>
+      </header>
+
+      <section class="actions">
+        <button id="btn-update" class="button button-primary" type="button">手动拉取更新</button>
+        <button id="btn-push" class="button button-accent" type="button">手动抓取并推送</button>
+      </section>
+
+      <section class="panel">
+        <h2>推送订阅</h2>
+        <p class="hint">
+          手动输入格式：<code>platform_id:message_type:session_id</code>，
+          例如 <code>飘雪:GroupMessage:1063905732</code>。
+        </p>
+        <div class="target-editor">
+          <input id="target-input" type="text" placeholder="飘雪:GroupMessage:1063905732" />
+          <button id="btn-add-target" class="button" type="button">添加订阅</button>
+        </div>
+        <ul id="target-list" class="target-list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>最近结果</h2>
+        <pre id="result" class="result"></pre>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

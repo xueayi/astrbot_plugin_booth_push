@@ -9,6 +9,7 @@ from typing import Any
 
 from astrbot.api import AstrBotConfig, star
 from astrbot.api.event import AstrMessageEvent, MessageChain, filter
+from astrbot.api.web import request as plugin_request
 from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
 from . import crawler
@@ -34,6 +35,7 @@ class Main(star.Star):
         self.image_dir = self.data_dir / "images"
         self._job_ids: list[str] = []
         self._startup_task: asyncio.Task | None = None
+        self._register_web_apis()
 
     @filter.on_astrbot_loaded()
     async def on_loaded(self, *args, **kwargs) -> None:
@@ -133,6 +135,102 @@ class Main(star.Star):
             yield event.plain_result(f"翻译通路正常：{translated}")
         else:
             yield event.plain_result("翻译失败，请查看 AstrBot 日志中的详细错误。")
+
+    def _register_web_apis(self) -> None:
+        """Register dashboard page APIs used by the plugin control page."""
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/update",
+            self.api_update,
+            ["POST"],
+            "手动拉取 Booth 更新",
+        )
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/push",
+            self.api_push,
+            ["POST"],
+            "手动抓取并推送 Booth 商品",
+        )
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/status",
+            self.api_status,
+            ["GET"],
+            "查询 Booth 插件状态",
+        )
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/targets",
+            self.api_manage_targets,
+            ["POST"],
+            "动态管理 Booth 推送订阅",
+        )
+
+    async def api_update(self) -> dict:
+        """Manual update endpoint for the plugin page."""
+        ok, message = await self.run_update()
+        return {"status": "ok" if ok else "error", "message": message}
+
+    async def api_push(self) -> dict:
+        """Manual crawl-and-push endpoint for the plugin page."""
+        ok, message = await self.run_daily()
+        return {"status": "ok" if ok else "error", "message": message}
+
+    async def api_status(self) -> dict:
+        """Return current plugin and subscription status."""
+        jobs = await self.context.cron_manager.list_jobs("basic")
+        provider_id = await self._translation_provider_id()
+        quota = self._category_quota()
+        configured = [
+            str(target).strip()
+            for target in self.config.get("push_targets", [])
+            if str(target).strip()
+        ]
+        bound = await self.get_kv_data("targets", [])
+        if not isinstance(bound, list):
+            bound = []
+        return {
+            "status": "ok",
+            "cron_registered": any(job.name == PUSH_JOB_NAME and job.enabled for job in jobs),
+            "daily_cron": self.config.get("daily_cron", ""),
+            "provider_id": provider_id,
+            "quota": quota,
+            "configured_targets": configured,
+            "bound_targets": bound,
+            "last_update_at": await self.get_kv_data("last_update_at", ""),
+            "last_push_at": await self.get_kv_data("last_push_at", ""),
+        }
+
+    async def api_manage_targets(self) -> dict:
+        """Add or remove a dynamic push subscription from the plugin page."""
+        payload = await plugin_request.json({})
+        if not isinstance(payload, dict):
+            return {"status": "error", "message": "请求格式错误。"}
+        umo = str(payload.get("umo") or "").strip()
+        action = str(payload.get("action") or "").strip()
+        if not umo:
+            return {"status": "error", "message": "umo 不能为空。"}
+        existing = await self.get_kv_data("targets", [])
+        if not isinstance(existing, list):
+            existing = []
+        if action == "add" and umo not in existing:
+            existing.append(umo)
+            await self.put_kv_data("targets", existing)
+            return {"status": "ok", "message": "已添加订阅。", "targets": existing}
+        if action == "remove" and umo in existing:
+            existing.remove(umo)
+            await self.put_kv_data("targets", existing)
+            return {"status": "ok", "message": "已移除订阅。", "targets": existing}
+        return {"status": "ok", "message": "无需变更。", "targets": existing}
+
+    async def _all_targets(self) -> list[str]:
+        """Return the union of configured and KV-bound push targets."""
+        configured = [
+            str(target).strip()
+            for target in self.config.get("push_targets", [])
+            if str(target).strip()
+        ]
+        bound = await self.get_kv_data("targets", [])
+        if not isinstance(bound, list):
+            bound = []
+        return list(dict.fromkeys([*configured, *(str(item) for item in bound)]))
 
     async def _startup_update(self) -> None:
         """Delayed first crawl so plugin loading is not blocked."""
@@ -310,13 +408,7 @@ class Main(star.Star):
             self.logger.error("Booth long image rendering failed: %s", exc)
             return False, "长图渲染失败。"
 
-        configured_targets = [
-            str(target).strip()
-            for target in self.config.get("push_targets", [])
-            if str(target).strip()
-        ]
-        bound_targets = await self.get_kv_data("targets", [])
-        targets = list(dict.fromkeys([*configured_targets, *bound_targets]))
+        targets = await self._all_targets()
         if not targets:
             return False, "没有配置推送目标。"
 

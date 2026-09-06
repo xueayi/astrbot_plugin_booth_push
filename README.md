@@ -46,8 +46,19 @@ WebUI 插件配置项：
 - `/booth push`：先爬取，再推送当前新商品。
 - `/booth status`：查看定时、配额、爬取和推送状态。
 - `/booth check`：测试翻译模型通路。
+- WebUI：插件管理页提供“手动拉取更新”“手动抓取并推送”按钮，并动态显示/增删 `/booth bind` 生成的订阅。
 
 修改 `daily_cron` 后需要重载插件才会重新注册定时任务。
+
+## 手动填写 UMO
+
+配置项 `push_targets` 的每项格式为 `platform_id:message_type:session_id`，例如：
+
+```text
+飘雪:GroupMessage:1063905732
+```
+
+如果使用 QQ OneBot，`platform_id` 通常是 WebUI 中平台适配器的名称，`message_type` 为 `GroupMessage` 或 `FriendMessage`，`session_id` 是群号或 QQ 号。也可以用 `/booth bind` 在目标会话里直接绑定。
 
 ## 数据位置
 

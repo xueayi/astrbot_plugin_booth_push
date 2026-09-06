@@ -1,6 +1,6 @@
 [project]
 name = "astrbot-plugin-booth-push"
-version = "0.1.0"
+version = "0.2.0"
 description = "Direct Booth daily crawl and push plugin for AstrBot"
 requires-python = ">=3.10"
 dependencies = [
