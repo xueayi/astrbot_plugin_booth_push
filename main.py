@@ -40,7 +40,10 @@ class Main(star.Star):
     @filter.on_astrbot_loaded()
     async def on_loaded(self, *args, **kwargs) -> None:
         """Register the daily job and optionally run a first crawl."""
-        await self._register_crons()
+        try:
+            await self._register_crons()
+        except Exception:
+            self.logger.exception("Booth cron registration failed")
         if self.config.get("startup_update", True):
             self._startup_task = asyncio.create_task(self._startup_update())
 
@@ -256,6 +259,11 @@ class Main(star.Star):
             persistent=False,
         )
         self._job_ids = [push_job.job_id]
+        self.logger.info(
+            "Booth cron job registered: %s (cron=%s)",
+            push_job.job_id[:8],
+            push_job.cron_expression,
+        )
 
     async def _daily_handler(self) -> None:
         """Run the scheduled crawl and push."""
