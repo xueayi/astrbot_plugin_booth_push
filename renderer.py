@@ -11,6 +11,7 @@ def render_text(
     free_items: list[dict[str, Any]],
     paid_items: list[dict[str, Any]],
     translations: dict[int, str],
+    footer: str | None = None,
 ) -> str:
     """Build the text message that accompanies the long image.
 
@@ -18,6 +19,7 @@ def render_text(
         free_items: Items selected for the free section.
         paid_items: Items selected for the paid section.
         translations: Chinese titles keyed by item ID.
+        footer: Optional final line appended to the message.
 
     Returns:
         A non-empty plain text block.
@@ -41,10 +43,6 @@ def render_text(
 
     while lines and lines[-1] == "":
         lines.pop()
-    lines.extend(
-        [
-            "",
-            "数据来源：https://github.com/xueayi/astrbot_plugin_booth_push",
-        ]
-    )
+    if footer:
+        lines.extend(["", str(footer).strip()])
     return "\n".join(lines)

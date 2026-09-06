@@ -419,7 +419,14 @@ class Main(star.Star):
         message_chain = (
             MessageChain()
             .file_image(str(image_path))
-            .message(render_text(free_items, paid_items, translations))
+            .message(
+                render_text(
+                    free_items,
+                    paid_items,
+                    translations,
+                    footer=str(self.config.get("text_footer", "") or ""),
+                )
+            )
         )
         sent_count = 0
         for target in targets:

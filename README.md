@@ -36,6 +36,7 @@ WebUI 插件配置项：
 - `http_proxy`：可选代理地址。
 - `llm_provider` / `enable_translation`：标题翻译模型。留空使用 AstrBot 当前默认对话模型。
 - `push_targets`：目标 `unified_msg_origin`；也可以在会话中使用 `/booth bind`。
+- `text_footer`：纯文本消息最后一行的自定义内容，留空则不显示。
 - `font_path`：中文字体路径，留空自动探测或下载 Noto Sans SC。
 
 ## 指令
