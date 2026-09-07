@@ -12,18 +12,27 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from astrbot.api import logger
 
+# Pinned to a noto-cjk release tag so the downloaded glyphs never change
+# under us; @main is mutable.
 FONT_URL = (
-    "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/"
+    "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@Sans2.004/"
     "Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
 )
+FONT_TIMEOUT_SECONDS = 60
 FONT_CANDIDATES = [
     Path("/System/Library/Fonts/PingFang.ttc"),
     Path("/System/Library/Fonts/Hiragino Sans GB.ttc"),
+    Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
     Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+    Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
     Path("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
     Path("C:/Windows/Fonts/msyh.ttc"),
     Path("C:/Windows/Fonts/simhei.ttf"),
 ]
+# Glyph sets the daily image needs: CJK, kana and Western European accented
+# letters. Candidates missing any of these are skipped so Spanish/Japanese
+# text does not render as tofu.
+FONT_COVERAGE_PROBE = "中文テストñáéíóúü¿¡"
 UNSUPPORTED_SYMBOL_RE = re.compile(
     "[\U0001f000-\U0001fbff\u2600-\u27bf\u2b00-\u2bff\ufe00-\ufe0f\u200d\u00a9\u00ae\u2122]+"
 )
@@ -107,12 +116,48 @@ def _wrap_text(
     return lines[:max_lines]
 
 
+def _font_covers(font: ImageFont.FreeTypeFont, probe: str) -> bool:
+    """Check whether a font renders every probe glyph instead of tofu.
+
+    Args:
+        font: Pillow font to inspect.
+        probe: Characters that must all be renderable.
+
+    Returns:
+        True when the font covers the probe (or coverage cannot be checked).
+    """
+    try:
+        # U+0378 is unassigned, so it renders as .notdef tofu (or blank);
+        # any probe glyph matching that output is considered missing.
+        blank = Image.new("L", (32, 32), 0).tobytes()
+        tofu = _render_probe_char(font, chr(0x0378))
+    except Exception:
+        return True
+    for char in probe:
+        try:
+            if _render_probe_char(font, char) in (tofu, blank):
+                return False
+        except Exception:
+            return False
+    return True
+
+
+def _render_probe_char(font: ImageFont.FreeTypeFont, char: str) -> bytes:
+    """Render one glyph onto a scratch canvas and return raw pixel bytes."""
+    image = Image.new("L", (32, 32), 0)
+    ImageDraw.Draw(image).text((2, 2), char, font=font, fill=255)
+    return image.tobytes()
+
+
 def _resolve_font(
     size: int,
     font_path: str,
     cache_dir: Path | None = None,
 ) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     """Resolve a CJK-capable font, downloading one when necessary.
+
+    Candidates lacking required glyphs (e.g. limited Latin coverage) are
+    skipped, which prevents accented Western text from rendering as tofu.
 
     Args:
         size: Font pixel size.
@@ -127,17 +172,36 @@ def _resolve_font(
     for candidate in candidates:
         try:
             if candidate.is_file():
-                return ImageFont.truetype(str(candidate), size)
+                font = ImageFont.truetype(str(candidate), size)
+                if _font_covers(font, FONT_COVERAGE_PROBE):
+                    return font
+                logger.warning(
+                    "Font %s lacks required glyphs, trying next candidate",
+                    candidate,
+                )
         except Exception as exc:
             logger.warning("Unable to load font %s: %s", candidate, exc)
 
     if cache_dir is not None:
-        cached_font = cache_dir / "NotoSansSC-Regular.otf"
+        cached_font = cache_dir / "NotoSansCJKsc-Regular.otf"
         try:
             if not cached_font.is_file():
                 cache_dir.mkdir(parents=True, exist_ok=True)
-                urllib.request.urlretrieve(FONT_URL, cached_font)
-            return ImageFont.truetype(str(cached_font), size)
+                request = urllib.request.urlopen(FONT_URL, timeout=FONT_TIMEOUT_SECONDS)
+                try:
+                    temporary = cached_font.with_name(cached_font.name + ".tmp")
+                    with temporary.open("wb") as handle:
+                        while chunk := request.read(1024 * 1024):
+                            handle.write(chunk)
+                    temporary.replace(cached_font)
+                finally:
+                    request.close()
+            font = ImageFont.truetype(str(cached_font), size)
+            if _font_covers(font, FONT_COVERAGE_PROBE):
+                return font
+            # A cached font that fails the probe is broken or incomplete.
+            logger.warning("Cached font %s failed the glyph probe, re-downloading", cached_font)
+            cached_font.unlink(missing_ok=True)
         except Exception as exc:
             logger.warning("Unable to prepare cached CJK font: %s", exc)
 
