@@ -45,7 +45,8 @@
   "crawl_delay": {
     "description": "请求间隔（秒）",
     "type": "float",
-    "default": 0.3
+    "default": 0.3,
+    "hint": "全局请求最小间隔，并发下同样生效。"
   },
   "http_timeout": {
     "description": "HTTP 超时（秒）",
