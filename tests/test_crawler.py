@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from crawler import crawl_with_client, map_item, page_item_ids
+from crawler import (
+    _RequestThrottle,
+    crawl_with_client,
+    is_free_item,
+    map_item,
+    page_item_ids,
+)
 
 
 class FakeClient:
@@ -13,7 +19,7 @@ def test_map_item_normalizes_booth_payload():
     item = map_item(
         {
             "id": 123,
-            "name": "無料 セーラー服",
+            "name": "制服セット",
             "price": "800円",
             "description": "desc",
             "images": [
@@ -33,10 +39,19 @@ def test_map_item_normalizes_booth_payload():
     assert item is not None
     assert item["id"] == 123
     assert item["price"] == 800
-    assert item["is_free"] == 1
+    assert item["is_free"] == 0
     assert item["thumb_url"].startswith("https://booth.pximg.net/c/300x300_a2_g5/")
     assert item["item_url"] == "https://booth.pm/ja/items/123"
     assert item["category"] == "3D衣装"
+
+
+def test_is_free_item_uses_price_only():
+    # Title markers like 無料/FREE are unreliable: paid bundles mention them.
+    assert is_free_item("0円") is True
+    assert is_free_item("") is True
+    assert is_free_item(None) is True
+    assert is_free_item("800円") is False
+    assert is_free_item("無料で使えます 800円") is False
 
 
 def test_page_item_ids_extracts_unique_ids(monkeypatch):
@@ -46,8 +61,25 @@ def test_page_item_ids_extracts_unique_ids(monkeypatch):
             '<a href="/ja/items/11">A</a><a href="/ja/items/11">B</a><a href="/ja/items/22">C</a>'
         ),
     )
-    ids = page_item_ids(FakeClient(), "3D衣装", 1, 0)
+    ids = page_item_ids(FakeClient(), "3D衣装", 1, _RequestThrottle(0))
     assert ids == [11, 22]
+
+
+def test_throttle_serializes_request_slots(monkeypatch):
+    import crawler
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(crawler.time, "sleep", lambda s: sleeps.append(s))
+    throttle = _RequestThrottle(0.5)
+    start = crawler.time.monotonic()
+    monkeypatch.setattr(crawler.time, "monotonic", lambda: start)
+
+    throttle.wait()
+    throttle.wait()
+    throttle.wait()
+
+    # The first slot is free; each subsequent wait reserves the next 0.5s slot.
+    assert sleeps == [0.5, 1.0]
 
 
 def test_crawl_with_client_filters_seen_and_window(monkeypatch):

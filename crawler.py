@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
-import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any
@@ -21,7 +21,6 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 ITEM_ID_RE = re.compile(r"/items/(\d+)")
-FREE_TITLE_RE = re.compile(r"無料|フリー(?!ズ)|(?<![A-Za-z])FREE(?![A-Za-z])|(?<!\d)0(?:円|YEN)")
 
 
 def parse_price(raw: Any) -> int:
@@ -30,12 +29,13 @@ def parse_price(raw: Any) -> int:
     return int(digits) if digits else 0
 
 
-def is_free_item(price: Any, title: str) -> bool:
-    """Return whether an item is free by price or title marker."""
-    if parse_price(price) <= 0:
-        return True
-    normalized = unicodedata.normalize("NFKC", str(title or "")).upper()
-    return bool(FREE_TITLE_RE.search(normalized))
+def is_free_item(price: Any) -> bool:
+    """Return whether an item is free by its price.
+
+    Price is the only reliable signal: many paid items mention 無料/フリー
+    in their titles (e.g. bundle notes), so title markers are not used.
+    """
+    return parse_price(price) <= 0
 
 
 def _pximg_thumb_300(url: str) -> str | None:
@@ -78,6 +78,30 @@ def pick_thumb(images: list[Any]) -> str:
     return ""
 
 
+class _RequestThrottle:
+    """Enforce a minimum global interval between requests across worker threads.
+
+    With a thread pool, sleeping per task lets ``workers / delay`` requests
+    fire in parallel; reserving time slots serializes the actual request rate.
+    """
+
+    def __init__(self, interval: float) -> None:
+        self._interval = max(0.0, interval)
+        self._lock = threading.Lock()
+        self._next_slot = 0.0
+
+    def wait(self) -> None:
+        """Reserve the next request slot and sleep until it starts."""
+        if self._interval <= 0:
+            return
+        with self._lock:
+            now = time.monotonic()
+            delay = max(0.0, self._next_slot - now)
+            self._next_slot = max(now, self._next_slot) + self._interval
+        if delay:
+            time.sleep(delay)
+
+
 def map_item(payload: dict[str, Any]) -> dict[str, Any] | None:
     """Map a Booth item JSON payload to a normalized item dict."""
     if not payload or payload.get("is_placeholder"):
@@ -106,7 +130,7 @@ def map_item(payload: dict[str, Any]) -> dict[str, Any] | None:
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "image_urls": json.dumps(image_urls, ensure_ascii=False),
         "thumb_url": pick_thumb(images),
-        "is_free": 1 if is_free_item(payload.get("price"), payload.get("name") or "") else 0,
+        "is_free": 1 if is_free_item(payload.get("price")) else 0,
     }
 
 
@@ -135,12 +159,12 @@ def page_item_ids(
     client: httpx.Client,
     category: str,
     page: int,
-    delay: float,
+    throttle: _RequestThrottle,
 ) -> list[int]:
     """Collect item IDs from one sort=new browse page."""
     url = BROWSE_URL.format(category=quote(category, safe=""), page=page)
+    throttle.wait()
     body = http_get_text(client, url)
-    time.sleep(delay)
     ids: list[int] = []
     seen: set[int] = set()
     for match in ITEM_ID_RE.finditer(body):
@@ -151,9 +175,13 @@ def page_item_ids(
     return ids
 
 
-def fetch_item(client: httpx.Client, item_id: int, delay: float) -> dict[str, Any] | None:
+def fetch_item(
+    client: httpx.Client,
+    item_id: int,
+    throttle: _RequestThrottle,
+) -> dict[str, Any] | None:
     """Fetch and map one Booth item."""
-    time.sleep(delay)
+    throttle.wait()
     body = http_get_text(client, ITEM_JSON_URL.format(item_id=item_id))
     if not body:
         return None
@@ -191,6 +219,7 @@ def crawl_with_client(
 ) -> dict[str, Any]:
     """Crawl Booth and return unseen items without persisting anything."""
     known = set(seen)
+    throttle = _RequestThrottle(delay)
     summary: dict[str, Any] = {
         "items_by_category": {},
         "scanned": 0,
@@ -198,12 +227,12 @@ def crawl_with_client(
     }
 
     def fetch_one(item_id: int) -> dict[str, Any] | None:
-        return fetch_item(client, item_id, delay)
+        return fetch_item(client, item_id, throttle)
 
     for category in categories:
         items: list[dict[str, Any]] = []
         for page in range(1, max_pages + 1):
-            ids = page_item_ids(client, category, page, delay)
+            ids = page_item_ids(client, category, page, throttle)
             new_ids = [item_id for item_id in ids if item_id not in known]
             summary["scanned"] += len(new_ids)
             if not new_ids:
