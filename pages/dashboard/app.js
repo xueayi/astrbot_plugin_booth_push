@@ -94,6 +94,8 @@ if (!bridge || typeof bridge.ready !== "function") {
   try {
     await bridge.ready();
     await renderStatus();
+    // Refresh periodically so background cron pushes show up without a reload.
+    setInterval(renderStatus, 30000);
   } catch (error) {
     statusSummary.textContent = `页面初始化失败：${error}`;
   }
