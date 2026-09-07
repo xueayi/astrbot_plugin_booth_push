@@ -21,6 +21,9 @@ from .translator import translate_titles
 PLUGIN_NAME = "astrbot_plugin_booth_push"
 UPDATE_JOB_NAME = "booth_push_daily_update"
 PUSH_JOB_NAME = "booth_push_daily_push"
+# Booth item IDs grow monotonically, so keeping the largest N per category
+# keeps the most recent history while bounding KV storage growth.
+MAX_SEEN_PER_CATEGORY = 2000
 
 
 class Main(star.Star):
@@ -65,9 +68,11 @@ class Main(star.Star):
         targets = await self.get_kv_data("targets", [])
         if not isinstance(targets, list):
             targets = []
-        if umo not in targets:
-            targets.append(umo)
-            await self.put_kv_data("targets", targets)
+        if umo in targets:
+            yield event.plain_result("当前会话已绑定过推送目标。")
+            return
+        targets.append(umo)
+        await self.put_kv_data("targets", targets)
         yield event.plain_result("当前会话已绑定为推送目标。")
 
     @booth_group.command("unbind")
@@ -409,7 +414,10 @@ class Main(star.Star):
 
         image_path = self.image_dir / "daily.png"
         try:
-            build_long_image(
+            # PIL rendering and possible font download are blocking; keep them
+            # off the event loop so the whole bot does not stall.
+            await asyncio.to_thread(
+                build_long_image,
                 free_items,
                 paid_items,
                 translations,
@@ -445,14 +453,26 @@ class Main(star.Star):
                     sent_count += 1
             except Exception as exc:
                 self.logger.error("Booth push to %s failed: %s", target, exc)
-        if sent_count != len(targets):
-            return False, f"仅成功推送到 {sent_count}/{len(targets)} 个目标。"
+        if sent_count == 0:
+            return False, "推送失败：所有目标均发送失败，本次内容将在下轮重试。"
 
+        # At least one target succeeded: record the push point so successful
+        # targets do not receive duplicates on the next run; failed targets
+        # intentionally miss this batch (documented in the README).
         await self._mark_seen(quota, all_items)
         await self.put_kv_data(
             "last_push_at",
             datetime.now(timezone.utc).isoformat(),
         )
+        if sent_count < len(targets):
+            self.logger.warning(
+                "Booth push partially succeeded: %d/%d targets",
+                sent_count,
+                len(targets),
+            )
+            return False, (
+                f"推送部分成功：{sent_count}/{len(targets)} 个目标，未送达的目标本次不再补推。"
+            )
         translated_count = sum(1 for item in all_items if translations.get(item.get("id")))
         translation_note = (
             "（翻译失败，保留日文标题）" if translation_attempted and translated_count == 0 else ""
@@ -466,7 +486,11 @@ class Main(star.Star):
         quota: dict[str, int],
         all_items: list[dict[str, Any]],
     ) -> None:
-        """Persist item IDs after a successful push so future runs skip them."""
+        """Persist item IDs after a successful push so future runs skip them.
+
+        The per-category list is capped at ``MAX_SEEN_PER_CATEGORY`` (newest
+        IDs win) to keep the KV record bounded.
+        """
         mapping = await self._seen_ids()
         for category, _count in quota.items():
             existing = set(mapping.get(category, []))
@@ -474,5 +498,5 @@ class Main(star.Star):
                 int(item["id"]) for item in all_items if item.get("category") == category
             )
             if existing:
-                mapping[category] = sorted(existing)
+                mapping[category] = sorted(existing)[-MAX_SEEN_PER_CATEGORY:]
         await self.put_kv_data("seen_ids", mapping)
