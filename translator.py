@@ -8,6 +8,10 @@ from typing import Any
 
 from astrbot.api import logger
 
+# Keep the translation KV record bounded; oldest entries (insertion order)
+# are dropped first. Items rarely resurface once pushed, so this is safe.
+MAX_CACHE_ENTRIES = 5000
+
 
 def _parse_json_object(text: str) -> dict:
     """Parse an LLM JSON response, tolerating prose or code fences."""
@@ -76,5 +80,8 @@ async def translate_titles(
         translated = parsed.get(str(item_id))
         if isinstance(translated, str) and translated.strip():
             cache[str(item_id)] = translated.strip()
+    if len(cache) > MAX_CACHE_ENTRIES:
+        for key in list(cache.keys())[:-MAX_CACHE_ENTRIES]:
+            del cache[key]
     await kv_put("translations", cache)
     return {int(item_id): str(value) for item_id, value in cache.items()}
