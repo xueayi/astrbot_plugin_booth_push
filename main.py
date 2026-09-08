@@ -107,7 +107,7 @@ class Main(star.Star):
         last_update_at = await self.get_kv_data("last_update_at", "")
         last_push_at = await self.get_kv_data("last_push_at", "")
         provider_id = await self._translation_provider_id()
-        quota = self._category_quota()
+        quota = self._enabled_quota()
         quota_text = "、".join(
             f"{CATEGORY_ZH.get(name, name)} {count}" for name, count in quota.items()
         )
@@ -115,7 +115,7 @@ class Main(star.Star):
         yield event.plain_result(
             "Booth 推送状态\n"
             f"定时：{'已注册' if registered else '未注册'} {self.config.get('daily_cron', '')}\n"
-            f"配额：{quota_text or '未配置'}\n"
+            f"配额：{quota_text or '未启用任何类目'}\n"
             f"翻译：{provider_id or '未找到可用模型'}\n"
             f"上次爬取：{last_update_at or '尚未爬取'}\n"
             f"KV 目标：{len(targets)}\n"
@@ -187,7 +187,7 @@ class Main(star.Star):
         """Return current plugin and subscription status."""
         jobs = await self.context.cron_manager.list_jobs("basic")
         provider_id = await self._translation_provider_id()
-        quota = self._category_quota()
+        quota = self._enabled_quota()
         configured = [
             str(target).strip()
             for target in self.config.get("push_targets", [])
@@ -291,6 +291,19 @@ class Main(star.Star):
                 quota[str(category)] = normalized
         return quota
 
+    def _enabled_quota(self) -> dict[str, int]:
+        """Intersect the enabled category switches with positive quotas.
+
+        A category is crawled and pushed only when its switch is on and its
+        quota is positive. Switches missing from the stored config default
+        to on so a config written before this option keeps working.
+        """
+        enabled = self.config.get("enabled_categories", {})
+        quota = self._category_quota()
+        if not isinstance(enabled, dict):
+            return quota
+        return {category: count for category, count in quota.items() if enabled.get(category, True)}
+
     def _window_start(self, last_push_at: str) -> str:
         """Return the UTC ISO lower bound for the current crawl window."""
         if not last_push_at:
@@ -332,9 +345,9 @@ class Main(star.Star):
 
     async def _crawl_result(self) -> tuple[bool, str, dict[str, Any]]:
         """Run a crawler pass and return a normalized result."""
-        quota = self._category_quota()
+        quota = self._enabled_quota()
         if not quota:
-            return False, "未配置有效的类目配额。", {}
+            return False, "未启用任何类目或配额均为 0，请在配置中开启类目。", {}
         seen_mapping = await self._seen_ids()
         seen: set[int] = set()
         for ids in seen_mapping.values():
@@ -373,7 +386,7 @@ class Main(star.Star):
         if not ok:
             return False, message
 
-        quota = self._category_quota()
+        quota = self._enabled_quota()
         free_items: list[dict[str, Any]] = []
         paid_items: list[dict[str, Any]] = []
         for category, category_quota in quota.items():

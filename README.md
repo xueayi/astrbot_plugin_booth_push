@@ -31,7 +31,8 @@ WebUI 插件配置项：
 - `daily_cron`：每日爬取并推送时间，默认 `0 8 * * *`。
 - `timezone`：Cron 时区，默认 `Asia/Shanghai`。
 - `startup_update`：插件加载后自动进行一次初次抓取，默认开启。
-- `category_quota`：两个类目免费/付费各自的推送数量。
+- `enabled_categories`：爬取/展示类目多选开关，共 8 个：3D服装、3D模型(其他)、3D小道具、3D贴图、3D装饰品、3D环境/世界、3D发型、3D鞋子。默认只开 3D服装与 3D发型。
+- `category_quota`：每个类目每档（免费/付费）推送数量；0 表示不推送该类目，与开关取交集生效。
 - `crawl_pages` / `crawl_workers` / `crawl_delay`：爬取页数、并发和请求间隔。`crawl_delay` 是全局请求最小间隔，并发下同样生效。
 - `http_proxy`：可选代理地址。
 - `llm_provider` / `enable_translation`：标题翻译模型。留空使用 AstrBot 当前默认对话模型。

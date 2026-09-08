@@ -66,11 +66,23 @@ CELL_WIDTH = (CANVAS_WIDTH - CANVAS_PAD * 2 - (COLS - 1) * CELL_PAD) // COLS
 TEXT_WIDTH = CELL_WIDTH - CELL_PAD * 2
 CATEGORY_STYLES = {
     "3D衣装": ("#2563eb", "#eff6ff"),
+    "3Dモデル（その他）": ("#0f766e", "#f0fdfa"),
+    "3D小道具": ("#d97706", "#fffbeb"),
+    "3Dテクスチャ": ("#db2777", "#fdf2f8"),
+    "3D装飾品": ("#dc2626", "#fef2f2"),
+    "3D環境・ワールド": ("#0284c7", "#f0f9ff"),
     "3D髪型": ("#7c3aed", "#f5f3ff"),
+    "3D靴": ("#4f46e5", "#eef2ff"),
 }
 CATEGORY_ZH = {
     "3D衣装": "3D服装",
+    "3Dモデル（その他）": "3D模型(其他)",
+    "3D小道具": "3D小道具",
+    "3Dテクスチャ": "3D贴图",
+    "3D装飾品": "3D装饰品",
+    "3D環境・ワールド": "3D环境/世界",
     "3D髪型": "3D发型",
+    "3D靴": "3D鞋子",
 }
 
 

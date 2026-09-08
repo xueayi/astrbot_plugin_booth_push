@@ -16,17 +16,94 @@
     "default": true,
     "hint": "首次安装时建议开启，用于抓取最近几页商品。"
   },
+  "enabled_categories": {
+    "description": "爬取/展示类目",
+    "type": "object",
+    "items": {
+      "3D衣装": {
+        "description": "3D服装",
+        "type": "bool",
+        "default": true
+      },
+      "3Dモデル（その他）": {
+        "description": "3D模型(其他)",
+        "type": "bool",
+        "default": false
+      },
+      "3D小道具": {
+        "description": "3D小道具",
+        "type": "bool",
+        "default": false
+      },
+      "3Dテクスチャ": {
+        "description": "3D贴图",
+        "type": "bool",
+        "default": false
+      },
+      "3D装飾品": {
+        "description": "3D装饰品",
+        "type": "bool",
+        "default": false
+      },
+      "3D環境・ワールド": {
+        "description": "3D环境/世界",
+        "type": "bool",
+        "default": false
+      },
+      "3D髪型": {
+        "description": "3D发型",
+        "type": "bool",
+        "default": true
+      },
+      "3D靴": {
+        "description": "3D鞋子",
+        "type": "bool",
+        "default": false
+      }
+    }
+  },
   "category_quota": {
     "description": "类目配额",
     "type": "object",
+    "hint": "每个已启用类目每档推送的数量；0 表示不推送该类目。",
     "items": {
       "3D衣装": {
         "description": "3D服装（每档数量）",
         "type": "int",
         "default": 6
       },
+      "3Dモデル（その他）": {
+        "description": "3D模型(其他)（每档数量）",
+        "type": "int",
+        "default": 4
+      },
+      "3D小道具": {
+        "description": "3D小道具（每档数量）",
+        "type": "int",
+        "default": 4
+      },
+      "3Dテクスチャ": {
+        "description": "3D贴图（每档数量）",
+        "type": "int",
+        "default": 4
+      },
+      "3D装飾品": {
+        "description": "3D装饰品（每档数量）",
+        "type": "int",
+        "default": 4
+      },
+      "3D環境・ワールド": {
+        "description": "3D环境/世界（每档数量）",
+        "type": "int",
+        "default": 4
+      },
       "3D髪型": {
         "description": "3D发型（每档数量）",
+        "type": "int",
+        "default": 4
+      },
+      "3D靴": {
+        "description": "3D鞋子（每档数量）",
         "type": "int",
         "default": 4
       }
