@@ -175,7 +175,7 @@
     "description": "文本末尾自定义信息",
     "type": "string",
     "default": "数据来源：https://github.com/xueayi/astrbot_plugin_booth_push",
-    "hint": "仅 send_text 开启时显示在纯文本清单最后一行；留空则不显示。"
+    "hint": "显示在长图底部；send_text 开启时也显示在纯文本清单最后一行。留空时长图底部显示默认来源。"
   },
   "font_path": {
     "description": "中文字体路径",

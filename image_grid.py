@@ -230,6 +230,7 @@ def build_long_image(
     out_path: Path,
     font_path: str = "",
     font_cache_dir: Path | None = None,
+    footer: str = "",
 ) -> Path:
     """Render free and paid sections into a two-column PNG.
 
@@ -240,6 +241,9 @@ def build_long_image(
         out_path: Destination PNG path.
         font_path: Explicit configured font path.
         font_cache_dir: Directory used to cache the downloaded font.
+        footer: Custom footer line shown at the image bottom; falls back
+            to the built-in data-source note when empty. Overlong text is
+            clipped with an ellipsis.
 
     Returns:
         The saved image path.
@@ -411,9 +415,15 @@ def build_long_image(
                 )
             y += CELL_HEIGHT
 
+    footer_raw = footer.strip()
+    footer_text = footer_raw or "数据来源：booth.pm"
+    while footer_text and draw.textlength(footer_text + "…", font=small_font) > TEXT_WIDTH:
+        footer_text = footer_text[:-1]
+    if footer_raw and footer_text != footer_raw:
+        footer_text += "…"
     draw.text(
         (CANVAS_PAD, height - FOOTER_HEIGHT + 14),
-        "数据来源：booth.pm",
+        footer_text,
         fill="#9ca3af",
         font=small_font,
     )

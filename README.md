@@ -38,7 +38,7 @@ WebUI 插件配置项：
 - `llm_provider` / `enable_translation`：标题翻译模型。留空使用 AstrBot 当前默认对话模型。
 - `push_targets`：目标 `unified_msg_origin`；也可以在会话中使用 `/booth bind`。
 - `send_text`：推送附带文字清单，默认关闭只发长图；开启后长图之外附送纯文本商品清单。
-- `text_footer`：纯文本消息最后一行的自定义内容（仅 `send_text` 开启时生效），留空则不显示。
+- `text_footer`：自定义信息，显示在长图底部（留空显示默认来源）；`send_text` 开启时也附在纯文本清单末尾。
 - `font_path`：中文字体路径，留空自动探测或下载 Noto Sans SC。
 
 ## 指令

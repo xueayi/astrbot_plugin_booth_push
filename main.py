@@ -462,6 +462,7 @@ class Main(star.Star):
                 image_path,
                 font_path=str(self.config.get("font_path", "")),
                 font_cache_dir=self.font_dir,
+                footer=str(self.config.get("text_footer", "") or ""),
             )
         except Exception as exc:
             self.logger.error("Booth long image rendering failed: %s", exc)
