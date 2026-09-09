@@ -471,10 +471,9 @@ class Main(star.Star):
         if not targets:
             return False, "没有配置推送目标。"
 
-        message_chain = (
-            MessageChain()
-            .file_image(str(image_path))
-            .message(
+        message_chain = MessageChain().file_image(str(image_path))
+        if self.config.get("send_text", False):
+            message_chain.message(
                 render_text(
                     free_items,
                     paid_items,
@@ -482,7 +481,6 @@ class Main(star.Star):
                     footer=str(self.config.get("text_footer", "") or ""),
                 )
             )
-        )
         sent_count = 0
         for target in targets:
             try:

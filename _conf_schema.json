@@ -59,6 +59,11 @@
         "description": "3D鞋子",
         "type": "bool",
         "default": false
+      },
+      "ソフトウェア": {
+        "description": "软件",
+        "type": "bool",
+        "default": false
       }
     }
   },
@@ -104,6 +109,11 @@
       },
       "3D靴": {
         "description": "3D鞋子（每档数量）",
+        "type": "int",
+        "default": 4
+      },
+      "ソフトウェア": {
+        "description": "软件（每档数量）",
         "type": "int",
         "default": 4
       }
@@ -155,11 +165,17 @@
     "default": [],
     "hint": "填写 umo，与 /booth bind 绑定的订阅取并集。"
   },
+  "send_text": {
+    "description": "推送附带文字清单",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后长图之外附送纯文本商品清单；默认只发长图。"
+  },
   "text_footer": {
     "description": "文本末尾自定义信息",
     "type": "string",
     "default": "数据来源：https://github.com/xueayi/astrbot_plugin_booth_push",
-    "hint": "显示在纯文本推送的最后一行；留空则不显示。"
+    "hint": "仅 send_text 开启时显示在纯文本清单最后一行；留空则不显示。"
   },
   "font_path": {
     "description": "中文字体路径",

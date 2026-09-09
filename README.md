@@ -31,13 +31,14 @@ WebUI 插件配置项：
 - `daily_cron`：每日爬取并推送时间，默认 `0 8 * * *`。
 - `timezone`：Cron 时区，默认 `Asia/Shanghai`。
 - `startup_update`：插件加载后自动进行一次初次抓取，默认开启。
-- `enabled_categories`：爬取/展示类目多选开关，共 8 个：3D服装、3D模型(其他)、3D小道具、3D贴图、3D装饰品、3D环境/世界、3D发型、3D鞋子。默认只开 3D服装与 3D发型。
+- `enabled_categories`：爬取/展示类目多选开关，共 9 个：3D服装、3D模型(其他)、3D小道具、3D贴图、3D装饰品、3D环境/世界、3D发型、3D鞋子、软件。默认只开 3D服装与 3D发型。
 - `category_quota`：每个类目每档（免费/付费）推送数量；0 表示不推送该类目，与开关取交集生效。
 - `crawl_pages` / `crawl_workers` / `crawl_delay`：爬取页数、并发和请求间隔。`crawl_delay` 是全局请求最小间隔，并发下同样生效。
 - `http_proxy`：可选代理地址。
 - `llm_provider` / `enable_translation`：标题翻译模型。留空使用 AstrBot 当前默认对话模型。
 - `push_targets`：目标 `unified_msg_origin`；也可以在会话中使用 `/booth bind`。
-- `text_footer`：纯文本消息最后一行的自定义内容，留空则不显示。
+- `send_text`：推送附带文字清单，默认关闭只发长图；开启后长图之外附送纯文本商品清单。
+- `text_footer`：纯文本消息最后一行的自定义内容（仅 `send_text` 开启时生效），留空则不显示。
 - `font_path`：中文字体路径，留空自动探测或下载 Noto Sans SC。
 
 ## 指令
