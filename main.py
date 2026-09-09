@@ -38,6 +38,9 @@ class Main(star.Star):
         self.image_dir = self.data_dir / "images"
         self._job_ids: list[str] = []
         self._startup_task: asyncio.Task | None = None
+        # Prevents concurrent run_daily executions (button + cron overlap)
+        # from each crawling and pushing their own shifted time windows.
+        self._push_lock = asyncio.Lock()
         self._register_web_apis()
 
     @filter.on_plugin_loaded()
@@ -398,6 +401,12 @@ class Main(star.Star):
 
     async def run_daily(self) -> tuple[bool, str]:
         """Crawl once, then push every new item to the configured targets."""
+        if self._push_lock.locked():
+            return False, "已有一次推送在进行中，请等它完成后再试。"
+        async with self._push_lock:
+            return await self._run_daily_locked()
+
+    async def _run_daily_locked(self) -> tuple[bool, str]:
         ok, message, result = await self._crawl_result()
         if not ok:
             return False, message
