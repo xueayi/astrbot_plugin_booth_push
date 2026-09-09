@@ -40,13 +40,29 @@ class Main(star.Star):
         self._startup_task: asyncio.Task | None = None
         self._register_web_apis()
 
-    @filter.on_astrbot_loaded()
-    async def on_loaded(self, *args, **kwargs) -> None:
-        """Register the daily job and optionally run a first crawl."""
+    @filter.on_plugin_loaded()
+    async def on_plugin_loaded(self, metadata) -> None:
+        """Register the daily cron job on every plugin (re)load.
+
+        ``on_astrbot_loaded`` fires only once per process, so a plugin
+        reload from the WebUI would terminate the cron job in terminate()
+        without ever re-registering it. This hook fires for every plugin
+        load including reloads; filter to this plugin and register
+        idempotently (_register_crons removes same-name jobs first).
+
+        Args:
+            metadata: Metadata of the plugin that just finished loading.
+        """
+        if getattr(metadata, "name", "") != PLUGIN_NAME:
+            return
         try:
             await self._register_crons()
         except Exception:
             self.logger.exception("Booth cron registration failed")
+
+    @filter.on_astrbot_loaded()
+    async def on_loaded(self, *args, **kwargs) -> None:
+        """Run a first crawl after the core finished loading."""
         if self.config.get("startup_update", True):
             self._startup_task = asyncio.create_task(self._startup_update())
 
