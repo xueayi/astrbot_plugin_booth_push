@@ -1,4 +1,16 @@
 {
+  "push_free": {
+    "description": "推送免费商品",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后不收集/推送免费档，也不生成免费长图。"
+  },
+  "push_paid": {
+    "description": "推送付费商品",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后不收集/推送付费档，也不生成付费长图。"
+  },
   "daily_cron": {
     "description": "每日爬取并推送 Cron",
     "type": "string",

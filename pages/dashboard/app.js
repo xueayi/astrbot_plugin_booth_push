@@ -10,7 +10,7 @@ async function renderStatus() {
     const targets = Array.from(
       new Set([...(data.configured_targets || []), ...(data.bound_targets || [])]),
     );
-    statusSummary.textContent = `cron ${data.cron_registered ? "已注册" : "未注册"} · ${data.daily_cron || "-"} · 上次推送 ${data.last_push_at || "尚未推送"}`;
+    statusSummary.textContent = `cron ${data.cron_registered ? "已注册" : "未注册"} · ${data.daily_cron || "-"} · 免费${data.push_free !== false ? "开" : "关"} 付费${data.push_paid !== false ? "开" : "关"} · 上次推送 ${data.last_push_at || "尚未推送"}`;
     targetList.innerHTML = "";
     if (!targets.length) {
       targetList.innerHTML = '<li class="empty">暂无推送订阅</li>';

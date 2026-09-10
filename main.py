@@ -131,9 +131,14 @@ class Main(star.Star):
             f"{CATEGORY_ZH.get(name, name)} {count}" for name, count in quota.items()
         )
         targets = await self.get_kv_data("targets", [])
+        tier_text = "、".join(
+            f"{label}{'开' if self.config.get(key, True) else '关'}"
+            for label, key in (("免费", "push_free"), ("付费", "push_paid"))
+        )
         yield event.plain_result(
             "Booth 推送状态\n"
             f"定时：{'已注册' if registered else '未注册'} {self.config.get('daily_cron', '')}\n"
+            f"档位：{tier_text}\n"
             f"配额：{quota_text or '未启用任何类目'}\n"
             f"翻译：{provider_id or '未找到可用模型'}\n"
             f"上次爬取：{last_update_at or '尚未爬取'}\n"
@@ -219,6 +224,8 @@ class Main(star.Star):
             "status": "ok",
             "cron_registered": any(job.name == PUSH_JOB_NAME and job.enabled for job in jobs),
             "daily_cron": self.config.get("daily_cron", ""),
+            "push_free": bool(self.config.get("push_free", True)),
+            "push_paid": bool(self.config.get("push_paid", True)),
             "provider_id": provider_id,
             "quota": quota,
             "configured_targets": configured,
@@ -407,6 +414,10 @@ class Main(star.Star):
             return await self._run_daily_locked()
 
     async def _run_daily_locked(self) -> tuple[bool, str]:
+        push_free = bool(self.config.get("push_free", True))
+        push_paid = bool(self.config.get("push_paid", True))
+        if not push_free and not push_paid:
+            return False, "免费与付费推送均已关闭，请至少开启一项。"
         ok, message, result = await self._crawl_result()
         if not ok:
             return False, message
@@ -416,12 +427,14 @@ class Main(star.Star):
         paid_items: list[dict[str, Any]] = []
         for category, category_quota in quota.items():
             category_items = result.get("items_by_category", {}).get(category, [])
-            free_items.extend(
-                [item for item in category_items if item.get("is_free")][:category_quota]
-            )
-            paid_items.extend(
-                [item for item in category_items if not item.get("is_free")][:category_quota]
-            )
+            if push_free:
+                free_items.extend(
+                    [item for item in category_items if item.get("is_free")][:category_quota]
+                )
+            if push_paid:
+                paid_items.extend(
+                    [item for item in category_items if not item.get("is_free")][:category_quota]
+                )
         free_items.sort(key=lambda item: int(item.get("likes") or 0), reverse=True)
         paid_items.sort(key=lambda item: int(item.get("likes") or 0), reverse=True)
         if not free_items and not paid_items:
@@ -450,20 +463,34 @@ class Main(star.Star):
         for item, thumbnail in zip(all_items, thumbnails):
             item["thumb_path"] = str(thumbnail) if thumbnail else ""
 
-        image_path = self.image_dir / "daily.png"
-        try:
+        font_path = str(self.config.get("font_path", ""))
+        footer = str(self.config.get("text_footer", "") or "")
+        # One image per enabled section; with both switches on, two images
+        # (free and paid) are sent together in a single message chain.
+        image_jobs: list[tuple[list[dict[str, Any]], list[dict[str, Any]], Path]] = []
+        if free_items:
+            image_jobs.append((free_items, [], self.image_dir / "daily_free.png"))
+        if paid_items:
+            image_jobs.append(([], paid_items, self.image_dir / "daily_paid.png"))
+
+        def _render_images() -> list[Path]:
             # PIL rendering and possible font download are blocking; keep them
             # off the event loop so the whole bot does not stall.
-            await asyncio.to_thread(
-                build_long_image,
-                free_items,
-                paid_items,
-                translations,
-                image_path,
-                font_path=str(self.config.get("font_path", "")),
-                font_cache_dir=self.font_dir,
-                footer=str(self.config.get("text_footer", "") or ""),
-            )
+            return [
+                build_long_image(
+                    free_part,
+                    paid_part,
+                    translations,
+                    path,
+                    font_path=font_path,
+                    font_cache_dir=self.font_dir,
+                    footer=footer,
+                )
+                for free_part, paid_part, path in image_jobs
+            ]
+
+        try:
+            image_paths = await asyncio.to_thread(_render_images)
         except Exception as exc:
             self.logger.error("Booth long image rendering failed: %s", exc)
             return False, "长图渲染失败。"
@@ -472,14 +499,16 @@ class Main(star.Star):
         if not targets:
             return False, "没有配置推送目标。"
 
-        message_chain = MessageChain().file_image(str(image_path))
+        message_chain = MessageChain()
+        for image_path in image_paths:
+            message_chain.file_image(str(image_path))
         if self.config.get("send_text", False):
             message_chain.message(
                 render_text(
                     free_items,
                     paid_items,
                     translations,
-                    footer=str(self.config.get("text_footer", "") or ""),
+                    footer=footer,
                 )
             )
         sent_count = 0
@@ -515,7 +544,8 @@ class Main(star.Star):
             "（翻译失败，保留日文标题）" if translation_attempted and translated_count == 0 else ""
         )
         return True, (
-            f"已推送 {len(all_items)} 个商品到 {len(targets)} 个目标。" + translation_note
+            f"已推送 免费 {len(free_items)} 件、付费 {len(paid_items)} 件"
+            f"（共 {len(image_paths)} 张长图）到 {len(targets)} 个目标。" + translation_note
         )
 
     async def _mark_seen(

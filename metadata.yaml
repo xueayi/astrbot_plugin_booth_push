@@ -4,7 +4,7 @@ desc: 直接爬取 Booth 每日新增的 3D 服装和 3D 发型，生成长图�
 tags:
   - booth
   - vrchat
-version: 1.3.1
+version: 1.4.0
 author: xueayi
 repo: https://github.com/xueayi/astrbot_plugin_booth_push
 astrbot_version: ">=4.5.7"

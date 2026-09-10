@@ -9,7 +9,7 @@
 - 本地增量抓取：按 `sort=new` 浏览新上架商品，再读取商品详情 JSON。
 - 时间窗口：只推送过去 24 小时发布且未推送过的商品。
 - KV 去重：推送成功后把商品 ID 写入 AstrBot 插件 KV（每类目仅保留最近 2000 条），重启不重复推送。
-- 免费/付费分组：价格 0 视为免费；标题中的「無料/FREE」字样不作为判定依据。
+- 免费/付费分组：价格 0 视为免费；标题中的「無料/FREE」字样不作为判定依据。免费与付费各有独立推送开关，各自生成一张长图；两者都开启时同一条消息同时发送两张图片。
 - LLM 翻译：批量翻译标题，失败时保留日文原标题。
 - 长图渲染：两列商品卡片、中文字体自动探测、emoji 清理；缺字形的字体会被跳过，西语等重音字符可正常渲染。
 
@@ -31,6 +31,7 @@ WebUI 插件配置项：
 - `daily_cron`：每日爬取并推送时间，默认 `0 8 * * *`。
 - `timezone`：Cron 时区，默认 `Asia/Shanghai`。
 - `startup_update`：插件加载后自动进行一次初次抓取，默认开启。
+- `push_free` / `push_paid`：免费、付费档位独立推送开关，默认都开启。关闭某档后该档不收集、不推送、不生成长图；两档都开时同时发送两张长图。
 - `enabled_categories`：爬取/展示类目多选开关，共 9 个：3D服装、3D模型(其他)、3D小道具、3D贴图、3D装饰品、3D环境/世界、3D发型、3D鞋子、软件。默认只开 3D服装与 3D发型。
 - `category_quota`：每个类目每档（免费/付费）推送数量；0 表示不推送该类目，与开关取交集生效。
 - `crawl_pages` / `crawl_workers` / `crawl_delay`：爬取页数、并发和请求间隔。`crawl_delay` 是全局请求最小间隔，并发下同样生效。
@@ -72,7 +73,7 @@ bot:GroupMessage:1234567
 
 - KV：`last_push_at`、`last_update_at`、`seen_ids`、`translations`。
 - 缩略图：`data/plugin_data/astrbot_plugin_booth_push/cache/thumbs/`。
-- 长图：`data/plugin_data/astrbot_plugin_booth_push/images/daily.png`。
+- 长图：`data/plugin_data/astrbot_plugin_booth_push/images/daily_free.png` 与 `daily_paid.png`。
 
 ## 注意
 

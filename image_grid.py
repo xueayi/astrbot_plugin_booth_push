@@ -249,6 +249,9 @@ def build_long_image(
         The saved image path.
     """
     groups = [("免费上新", free_items), ("付费上新", paid_items)]
+    # Each pushed image may contain a single section, so the header only
+    # lists sections that are actually present.
+    summary = " · ".join(f"{label} {len(items)} 件" for label, items in groups if items)
     section_heights = [
         HEADER_HEIGHT + math.ceil(len(items) / COLS) * CELL_HEIGHT
         for _label, items in groups
@@ -268,7 +271,7 @@ def build_long_image(
     draw.text((CANVAS_PAD, 24), "Booth 每日上新", fill="#111827", font=heading_font)
     draw.text(
         (CANVAS_PAD, 55),
-        (f"每日部分商品推荐 · 免费 {len(free_items)} 件 · 付费 {len(paid_items)} 件 · 按收藏排序"),
+        f"每日部分商品推荐 · {summary} · 按收藏排序",
         fill="#6b7280",
         font=small_font,
     )
