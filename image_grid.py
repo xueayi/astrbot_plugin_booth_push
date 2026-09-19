@@ -420,7 +420,10 @@ def build_long_image(
 
     footer_raw = footer.strip()
     footer_text = footer_raw or "数据来源：booth.pm"
-    while footer_text and draw.textlength(footer_text + "…", font=small_font) > TEXT_WIDTH:
+    # The footer spans the full canvas width, not the narrower cell text
+    # width, so measure against the remaining canvas space.
+    footer_width = CANVAS_WIDTH - CANVAS_PAD * 2
+    while footer_text and draw.textlength(footer_text + "…", font=small_font) > footer_width:
         footer_text = footer_text[:-1]
     if footer_raw and footer_text != footer_raw:
         footer_text += "…"
