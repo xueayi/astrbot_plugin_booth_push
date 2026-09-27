@@ -216,8 +216,21 @@ def crawl_with_client(
     max_pages: int,
     workers: int,
     delay: float,
+    min_likes: int = 0,
 ) -> dict[str, Any]:
-    """Crawl Booth and return unseen items without persisting anything."""
+    """Crawl Booth and return unseen items without persisting anything.
+
+    Args:
+        client: HTTP client used for all requests.
+        categories: Booth category names to crawl.
+        seen: Item IDs to skip (already pushed).
+        since: UTC ISO lower bound for the publish window.
+        max_pages: Maximum browse pages per category.
+        workers: Detail-fetch thread count.
+        delay: Global minimum interval between requests.
+        min_likes: Exclude items whose like count is at or below this
+            threshold; 0 disables the filter.
+    """
     known = set(seen)
     throttle = _RequestThrottle(delay)
     summary: dict[str, Any] = {
@@ -252,6 +265,8 @@ def crawl_with_client(
                     continue
                 if row.get("category") != category or not _published_after(row, since):
                     continue
+                if min_likes > 0 and int(row.get("likes") or 0) <= min_likes:
+                    continue
                 known.add(row["id"])
                 items.append(row)
                 summary["added"] += 1
@@ -270,6 +285,7 @@ def crawl_new(
     delay: float,
     timeout: float,
     proxy: str = "",
+    min_likes: int = 0,
 ) -> dict[str, Any]:
     """Open one HTTP client and crawl all requested categories."""
     kwargs: dict[str, Any] = {
@@ -289,4 +305,5 @@ def crawl_new(
             max_pages,
             workers,
             delay,
+            min_likes,
         )

@@ -135,11 +135,16 @@ class Main(star.Star):
             f"{label}{'开' if self.config.get(key, True) else '关'}"
             for label, key in (("免费", "push_free"), ("付费", "push_paid"))
         )
+        try:
+            min_likes = int(self.config.get("min_likes", 0) or 0)
+        except (TypeError, ValueError):
+            min_likes = 0
         yield event.plain_result(
             "Booth 推送状态\n"
             f"定时：{'已注册' if registered else '未注册'} {self.config.get('daily_cron', '')}\n"
             f"档位：{tier_text}\n"
             f"配额：{quota_text or '未启用任何类目'}\n"
+            f"收藏阈值：{f'≥{min_likes + 1}' if min_likes > 0 else '未启用'}\n"
             f"翻译：{provider_id or '未找到可用模型'}\n"
             f"上次爬取：{last_update_at or '尚未爬取'}\n"
             f"KV 目标：{len(targets)}\n"
@@ -220,6 +225,10 @@ class Main(star.Star):
         bound = await self.get_kv_data("targets", [])
         if not isinstance(bound, list):
             bound = []
+        try:
+            min_likes = max(0, int(self.config.get("min_likes", 0) or 0))
+        except (TypeError, ValueError):
+            min_likes = 0
         return {
             "status": "ok",
             "cron_registered": any(job.name == PUSH_JOB_NAME and job.enabled for job in jobs),
@@ -228,6 +237,7 @@ class Main(star.Star):
             "push_paid": bool(self.config.get("push_paid", True)),
             "provider_id": provider_id,
             "quota": quota,
+            "min_likes": min_likes,
             "configured_targets": configured,
             "bound_targets": bound,
             "last_update_at": await self.get_kv_data("last_update_at", ""),
@@ -381,6 +391,10 @@ class Main(star.Star):
         last_push_at = await self.get_kv_data("last_push_at", "")
         since = self._window_start(str(last_push_at or ""))
         try:
+            min_likes = int(self.config.get("min_likes", 0) or 0)
+        except (TypeError, ValueError):
+            min_likes = 0
+        try:
             result = await asyncio.to_thread(
                 crawler.crawl_new,
                 list(quota),
@@ -391,6 +405,7 @@ class Main(star.Star):
                 float(self.config.get("crawl_delay", 0.3) or 0.3),
                 float(self.config.get("http_timeout", 30) or 30),
                 str(self.config.get("http_proxy", "") or ""),
+                max(0, min_likes),
             )
         except Exception as exc:
             self.logger.error("Booth crawl failed: %s", exc)

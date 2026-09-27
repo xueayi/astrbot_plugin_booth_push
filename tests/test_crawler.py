@@ -109,11 +109,11 @@ def test_crawl_with_client_filters_seen_and_window(monkeypatch):
     pages = {("3D衣装", 1): [1, 2], ("3D髪型", 1): [3]}
     monkeypatch.setattr(
         "crawler.page_item_ids",
-        lambda client, category, page, delay: pages.get((category, page), []),
+        lambda client, category, page, throttle: pages.get((category, page), []),
     )
     monkeypatch.setattr(
         "crawler.fetch_item",
-        lambda client, item_id, delay: {
+        lambda client, item_id, throttle: {
             1: old_item,
             2: new_item,
             3: seen_item,
@@ -133,3 +133,49 @@ def test_crawl_with_client_filters_seen_and_window(monkeypatch):
     assert result["added"] == 1
     assert [item["id"] for item in result["items_by_category"]["3D衣装"]] == [2]
     assert "3D髪型" not in result["items_by_category"]
+
+
+def _likes_crawl(monkeypatch, likes_by_id, min_likes=0):
+    now = datetime.now(timezone.utc)
+    items = {
+        item_id: {
+            "id": item_id,
+            "category": "3D衣装",
+            "is_free": 0,
+            "likes": likes,
+            "created_at": now.isoformat(),
+        }
+        for item_id, likes in likes_by_id.items()
+    }
+    monkeypatch.setattr(
+        "crawler.page_item_ids",
+        lambda client, category, page, throttle: list(likes_by_id),
+    )
+    monkeypatch.setattr(
+        "crawler.fetch_item",
+        lambda client, item_id, throttle: items[item_id],
+    )
+    return crawl_with_client(
+        FakeClient(),
+        ["3D衣装"],
+        seen=set(),
+        since="",
+        max_pages=1,
+        workers=1,
+        delay=0,
+        min_likes=min_likes,
+    )
+
+
+def test_crawl_with_client_min_likes_threshold(monkeypatch):
+    result = _likes_crawl(monkeypatch, {10: 3, 11: 5, 12: 6, 13: 20}, min_likes=5)
+
+    # min_likes=5 excludes items with likes <= 5; 6 and 20 stay.
+    collected = result["items_by_category"]["3D衣装"]
+    assert sorted(item["id"] for item in collected) == [12, 13]
+
+
+def test_crawl_with_client_min_likes_zero_keeps_all(monkeypatch):
+    result = _likes_crawl(monkeypatch, {10: 0, 11: 5})
+
+    assert result["added"] == 2

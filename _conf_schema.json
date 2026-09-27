@@ -147,6 +147,12 @@
     "default": 0.3,
     "hint": "全局请求最小间隔，并发下同样生效。"
   },
+  "min_likes": {
+    "description": "收藏数阈值",
+    "type": "int",
+    "default": 0,
+    "hint": "排除收藏数 ≤ 阈值的商品；0 表示不筛选。"
+  },
   "http_timeout": {
     "description": "HTTP 超时（秒）",
     "type": "int",
