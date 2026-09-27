@@ -144,7 +144,7 @@ class Main(star.Star):
             f"定时：{'已注册' if registered else '未注册'} {self.config.get('daily_cron', '')}\n"
             f"档位：{tier_text}\n"
             f"配额：{quota_text or '未启用任何类目'}\n"
-            f"收藏阈值：{f'≥{min_likes + 1}' if min_likes > 0 else '未启用'}\n"
+            f"收藏阈值：{f'≥{min_likes}' if min_likes > 0 else '未启用'}\n"
             f"翻译：{provider_id or '未找到可用模型'}\n"
             f"上次爬取：{last_update_at or '尚未爬取'}\n"
             f"KV 目标：{len(targets)}\n"

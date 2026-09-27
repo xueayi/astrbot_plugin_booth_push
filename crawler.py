@@ -228,7 +228,7 @@ def crawl_with_client(
         max_pages: Maximum browse pages per category.
         workers: Detail-fetch thread count.
         delay: Global minimum interval between requests.
-        min_likes: Exclude items whose like count is at or below this
+        min_likes: Exclude items whose like count is below this
             threshold; 0 disables the filter.
     """
     known = set(seen)
@@ -265,7 +265,7 @@ def crawl_with_client(
                     continue
                 if row.get("category") != category or not _published_after(row, since):
                     continue
-                if min_likes > 0 and int(row.get("likes") or 0) <= min_likes:
+                if min_likes > 0 and int(row.get("likes") or 0) < min_likes:
                     continue
                 known.add(row["id"])
                 items.append(row)

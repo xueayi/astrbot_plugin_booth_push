@@ -151,7 +151,7 @@
     "description": "收藏数阈值",
     "type": "int",
     "default": 0,
-    "hint": "排除收藏数 ≤ 阈值的商品；0 表示不筛选。"
+    "hint": "排除收藏数 < 阈值的商品；0 表示不筛选，设 1 可排除 0 收藏商品。"
   },
   "http_timeout": {
     "description": "HTTP 超时（秒）",

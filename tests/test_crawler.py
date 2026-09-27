@@ -168,11 +168,19 @@ def _likes_crawl(monkeypatch, likes_by_id, min_likes=0):
 
 
 def test_crawl_with_client_min_likes_threshold(monkeypatch):
-    result = _likes_crawl(monkeypatch, {10: 3, 11: 5, 12: 6, 13: 20}, min_likes=5)
+    result = _likes_crawl(monkeypatch, {10: 3, 11: 5, 12: 6, 13: 20}, min_likes=6)
 
-    # min_likes=5 excludes items with likes <= 5; 6 and 20 stay.
+    # min_likes=6 excludes items with likes < 6; 6 (boundary) and 20 stay.
     collected = result["items_by_category"]["3D衣装"]
     assert sorted(item["id"] for item in collected) == [12, 13]
+
+
+def test_crawl_with_client_min_likes_one_drops_zero(monkeypatch):
+    result = _likes_crawl(monkeypatch, {10: 0, 11: 1, 12: 5}, min_likes=1)
+
+    # min_likes=1 is the way to drop zero-like items only.
+    collected = result["items_by_category"]["3D衣装"]
+    assert sorted(item["id"] for item in collected) == [11, 12]
 
 
 def test_crawl_with_client_min_likes_zero_keeps_all(monkeypatch):
